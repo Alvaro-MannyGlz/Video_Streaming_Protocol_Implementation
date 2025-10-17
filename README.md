@@ -49,7 +49,7 @@ The application layer will use a simple, text-based request-response model over 
 ## Testing and Metrics Plan
 Testing will focus on validating both the reliability and the performance of the GBN implementation under adverse conditions.
 
-###Testing Plan:
+### Testing Plan:
 - Clean Network: Test the system with 0% packet loss and 0 reordering. This validates the baseline throughput and ensures the protocol correctly handles the normal flow (no retransmissions).
 
 - Random Loss: Introduce a constant, small percentage of random packet loss (e.g., 5% loss). This tests the core GBN retransmission logic and the timeout mechanism.
