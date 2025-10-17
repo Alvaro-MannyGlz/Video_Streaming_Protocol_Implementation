@@ -1,13 +1,20 @@
 # Video_Streaming_Protocol_Implementation
 
----
-
 ## Team Names
 - Alvaro Gonzalez
 - Jesus Lopez
 - Gabriel Garcia
 - Francisco Morales
 - Daniel Villafranco
+
+## Team Responsibilities
+| Name | Primary Area of Responsibility | Key Components |
+| :--- | :--- | :--- |
+| **Alvaro Gonzalez** | **Project Lead / Transport Core** | GBN Sender Logic (Sequence Numbers, Window Management). |
+| **Jesus Lopez** | **Transport Reliability / Timers** | GBN Retransmission Logic (Timeout implementation) and Checksum validation. |
+| **Gabriel Garcia** | **Application Layer (Server)** | Server Command Parsing (`PLAY`, `404` handling) and **Concurrency** (Threading). |
+| **Francisco Morales** | **Client and Frame Handling** | Client request generation, receiving/buffering frames, and calculating **Dropped Frames / Stall Time**. |
+| **Daniel Villafranco** | **Testing and Metrics** | Designing and implementing **network loss simulation** (Random and Burst Loss) and calculating **Throughput / Retransmissions**. |
 
 ---
 
@@ -55,14 +62,3 @@ Testing will focus on validating both the reliability and the performance of the
 - Random Loss: Introduce a constant, small percentage of random packet loss (e.g., 5% loss). This tests the core GBN retransmission logic and the timeout mechanism.
 
 - Burst Loss: Introduce periods of high loss (e.g., 50% loss over a 100ms window) to simulate heavy network congestion. This pushes the limits of the GBN window size and tests its ability to recover from multiple consecutive losses.
-
-## Team Responsibilities
-
-I know y'all will see this Friday morning try and see if you can research a bit of what is being said as your responsibility we don't need a fully functional prototype, but something good enough to submit looking to submit something by **7 PM**
-| Name | Primary Area of Responsibility | Key Components |
-| :--- | :--- | :--- |
-| **Alvaro Gonzalez** | **Project Lead / Transport Core** | GBN Sender Logic (Sequence Numbers, Window Management). |
-| **Jesus Lopez** | **Transport Reliability / Timers** | GBN Retransmission Logic (Timeout implementation) and Checksum validation. |
-| **Gabriel Garcia** | **Application Layer (Server)** | Server Command Parsing (`PLAY`, `404` handling) and **Concurrency** (Threading). |
-| **Francisco Morales** | **Client and Frame Handling** | Client request generation, receiving/buffering frames, and calculating **Dropped Frames / Stall Time**. |
-| **Daniel Villafranco** | **Testing and Metrics** | Designing and implementing **network loss simulation** (Random and Burst Loss) and calculating **Throughput / Retransmissions**. |
