@@ -14,7 +14,7 @@ class GBN:
         self.buffer = ()
         self.timer = None
 
-    def compute_checksun(data: bytes) -> init:
+    def compute_checksum(data: bytes) -> int:
         checksun = 0
         for i in range(0, len(data), 2):
             section = data[i] << 8
@@ -28,7 +28,7 @@ class GBN:
     def create_packet(self, seq_num, data):
         pass
 
-    def send_paclet(self, packet):
+    def send_packet(self, packet):
         pass
 
     def receive_ack(self, ack_num):
