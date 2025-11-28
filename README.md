@@ -1,4 +1,4 @@
-# Video_Streaming_Protocol_Implementation
+# CinePy
 
 ## Team Names
 - Alvaro Gonzalez
