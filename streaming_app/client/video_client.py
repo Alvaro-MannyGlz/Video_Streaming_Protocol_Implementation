@@ -22,7 +22,7 @@ import time
 import logging
 from typing import Optional
 
-from frame_handler import FrameHandler
+from streaming_app.client.frame_handler import FrameHandler
 
 logger = logging.getLogger("VideoClient")
 logging.basicConfig(level=logging.INFO)
