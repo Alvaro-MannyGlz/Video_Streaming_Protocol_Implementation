@@ -20,8 +20,17 @@ If your transport is different, adapt the calls in receive_loop().
 import threading
 import time
 import logging
+import sys
+import os
 from typing import Optional
 
+# Setup path to find 'shared' folder 
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Import the shared protocol
+from shared.gbn_protocol import GBNReceiver, GBNUtilities
+
+# Import the local frame handler (from ./frame_handler.py)
 from frame_handler import FrameHandler
 
 logger = logging.getLogger("VideoClient")

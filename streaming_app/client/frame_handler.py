@@ -1,5 +1,4 @@
 # Receiver's Application Layer
-# frame_handler.py
 """
 FrameHandler:
 - Reassembles frames from chunked payloads.
