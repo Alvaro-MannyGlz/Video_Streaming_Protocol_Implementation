@@ -65,10 +65,16 @@ class GBNUtilities:
 class GBNSender:
     def __init__(self, socket):
         self.socket = socket
+        self.send_base = 0
+        self.next_seq_num = 0
+        self.window_size = 5
+        self.unacked_buffer = {}
+        self.timer = None
 
     def send_data(self,data):
-        # if-else for the sending logic
-        pass
+        seq_num, checksum, payload = parsed_ack
+        if GBNUtilities.compute_checksum(payload) != checksum:
+            return
 
     def receive_ack(self, ack_num):
         # if-else for receiving logic
@@ -77,6 +83,33 @@ class GBNSender:
     def handle_timeout(self):
         # Logic for when retransmission timer expires
         pass
+
+    # Call when send_base == next_seq_num, which when window was empty and first packet just sent
+    def start_timer(self):
+        if self.timer is None:
+            self.timer = Timer(timeout_int, self.handle_timeout)
+            self.timer.start()
+
+    # Call when all unacked packets r acknowledges (send_base = next_seq_num)
+    def stop_timer(self):
+        if self.timer is not None:
+            self.timer.cancel()
+            self.timer = None
+
+    # Call after receiving valid ACK that shifts send_base
+    def restart_timer(self):
+        self.stop_timer()
+        self.start_timer()
+
+    def handle_timeout(self):
+        # Resend all packets in window starting at send_base
+        for seq in sorted(self.unacked_buffer.keys()):
+            packet = self.unacked_buffer[seq]
+            self.socket.sendto(packet, self.receiver_addr)
+
+        self.restart_timer()
+    
+
 
 # -- Receiver Structure (Francisco) --
 class GBNReceiver:
