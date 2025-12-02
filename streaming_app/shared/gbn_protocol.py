@@ -113,5 +113,10 @@ class GBNSender:
 
 # -- Receiver Structure (Francisco) --
 class GBNReceiver:
-#    ... (Logic for checking sequence numbers, generating ACKs, and delivering in-order data)
-    pass # delete after adding
+    seq_num, checksum, payload = parsed
+
+    computed = GBNUtilities.compute_checksum(payload)
+
+    #If checksum fails
+    if computed != checksum:
+        return None
