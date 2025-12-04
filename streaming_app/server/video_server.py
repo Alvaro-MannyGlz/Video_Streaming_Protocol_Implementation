@@ -9,7 +9,8 @@ import socket
 import threading
 
 # Add the parent directory to the path so we can see 'shared'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, BASE_DIR)
 
 from shared.gbn_protocol import GBNSender, GBNUtilities
 
