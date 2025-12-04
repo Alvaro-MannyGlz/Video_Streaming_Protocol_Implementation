@@ -1,5 +1,3 @@
-# Sender's Application Layer
-
 import cv2 
 import struct
 import sys
