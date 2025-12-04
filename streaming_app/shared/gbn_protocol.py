@@ -137,6 +137,7 @@ class GBNSender:
         now = time.time()
         elapsed = now - self.metrics["start_time"]
         throughput = self.metrics["bytes_sent"] / elapsed if elapsed > 0 else 0
+        
         efficiency = (self.metrics["packets_delivered"] / max(self.metrics["packets_sent"], 1))
 
         return {
@@ -149,7 +150,7 @@ class GBNSender:
             "elapsed_time_sec": elapsed
         }
 
-# -- Receiver Structure (Francisco) --
+# -- Receiver Structure --
 import logging
 
 logger = logging.getLogger("GBNReceiver")
