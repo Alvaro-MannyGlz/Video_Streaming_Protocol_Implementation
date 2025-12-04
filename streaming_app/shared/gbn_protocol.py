@@ -1,9 +1,3 @@
-# THINGS NEEDED
-# Cumulative ACKs
-# Checksums?
-# Retransmission Timer
-# Receiver Structure (Francisco)
-
 import socket
 import struct
 import time
