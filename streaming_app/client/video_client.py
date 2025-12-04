@@ -1,8 +1,3 @@
-# Initialize the client socket
-# Handle command-line arguments
-# Sends the PLAY command
-# Manage incoming stream
-# video_client.py
 """
 Client that uses a GBN transport (socket-like) to request a video, receive chunked frames,
 and hand them off to FrameHandler for reassembly/playback/QoE metrics.
