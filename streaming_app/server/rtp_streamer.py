@@ -19,13 +19,40 @@ class RTPStreamer:
         - fragmenting frames into RTP chunks
         - pacing frames using FPS
     """
-    def __init__(self, gbn_sender, max_packet_size=1400, fps: Optional[float] = None):
+    def __init__(self, gbn_sender, max_packet_size=1400, fps: Optional[float] = None, server_socket):
         self.gbn = gbn_sender
         self.max_packet_size = max_packet_size
         self.max_chunk_bytes = max_packet_size - 8
         self.fps = fps
         self.frame_id = 0
         self._stop = False
+        self.server_socket = server_socket
+
+        # Ideal conditions
+        self.loss = LossModel(
+            random_loss_rate=0.0,
+            burst_loss_rate=0.0,
+            burst_duration_ms=0,
+            burst_interval_ms=0
+        )
+        # Random 5% loss simulation
+        """
+        self.loss = LossModel(
+            random_loss_rate=0.05,
+            burst_loss_rate=0.0,
+            burst_duration_ms=0,
+            burst_interval_ms=0
+        )
+        """
+        # Heavy traffic w/ heavy loss simulation
+        """
+        self.loss = LossModel(
+            random_loss_rate=0.0,
+            burst_loss_rate=0.05,
+            burst_duration_ms=100,
+            burst_interval_ms=1000
+        )
+        """
     
     def _encode_frame(self, frame):
         # Convert raw images into JPEG bytes
