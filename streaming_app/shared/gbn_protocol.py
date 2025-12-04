@@ -3,6 +3,11 @@ import struct
 import time
 from threading import Timer
 
+class LossModel:
+    """Default 'No Loss' model"""
+    def allow_packet(self):
+        return True
+
 # implement the Go-Back-N(GBN) server and receiver logic
 # -- Protocol Constants --
 seq_num = 65536 # 2^16
@@ -23,7 +28,7 @@ class GBNUtilities:
         checksum = 0
         for i in range(0, len(data), 2):
             section = data [i] << 8
-            if i+ 1 < len(data):
+            if i + 1 < len(data):
                 i += 1
                 section += data[i]
             checksum += section
@@ -78,7 +83,8 @@ class GBNSender:
         }
         
     def send_data(self,data):
-        checksum = GBNUtilities.compute_checksum(data)
+        seq_bytes = struct.pack('!H', self.next_seq_num)
+        checksum = GBNUtilities.compute_checksum(seq_bytes + data)
         packet = struct.pack(header_format, self.next_seq_num, checksum) + data
         self.unacked_buffer[self.next_seq_num] = packet
         self.metrics["packets_sent"] += 1
@@ -94,8 +100,31 @@ class GBNSender:
         self.next_seq_num = (self.next_seq_num + 1) % seq_num
 
     def receive_ack(self, ack_num):
-        # if-else for receiving logic
-        pass
+        # 1. Stop timer while we process
+        self.stop_timer()
+    
+        # 2. Cumulative ACK Logic
+        if ack_num in self.unacked_buffer:
+            to_remove = []
+            for seq in self.unacked_buffer:
+            # Logic: If seq is "less than or equal" to ack_num in a circular sense
+            # Simplification: Just check if seq <= ack_num (if no wrapping issues in buffer)
+                to_remove.append(seq)
+                if seq == ack_num:
+                    break
+        
+            for seq in to_remove:
+                del self.unacked_buffer[seq]
+                self.send_base = (self.send_base + 1) % seq_num
+                self.metrics["packets_delivered"] += 1 # Update metrics here? Or earlier?
+
+    # 3. Restart timer if there are still packets in flight
+        if self.unacked_buffer:
+            self.start_timer()
+
+    # 3. Restart timer if there are still packets in flight
+        if self.unacked_buffer:
+            self.start_timer()
 
     # Call when send_base == next_seq_num, which when window was empty and first packet just sent
     def start_timer(self):
@@ -313,4 +342,3 @@ class GBNReceiver:
             self.sock.close()
         except Exception:
             pass
-
