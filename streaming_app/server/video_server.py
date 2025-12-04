@@ -40,16 +40,18 @@ class VideoServer:
                 daemon=True
             ).start()
     
-    # Command Parser 
+    # Command Parser and Handler
     def handle_client(self, message, client_addr):
         parts = message.split(maxsplit=1)
         command = parts[0]
         
+        # Extract filename 
         if len(parts) > 1:
             argument = parts[1].strip()
         else:
             argument = ""
         
+        # Create session entry for new clients
         if client_addr not in client_sessions:
             client_sessions[client_addr] = {
                 "streamer": None,
@@ -62,9 +64,22 @@ class VideoServer:
             filename = argument.strip()
             
             try:
-               session["streamer"] = rtp_streamer.RTPStreamer(client_addr,filename,self.server_socket)
-               session["streamer"].start_stream()
-               self.server_socket.sendto(b"200 OK PLAY", client_addr)
+                # Crete GBN sender for client
+                sender = GBNSender(self.server_socket)
+                               
+                streamer = rtp_streamer.RTPStreamer(sender)
+                
+                session["streamer"] = streamer
+                
+                # Stream video in background thread
+                threading.Thread(
+                    target=streamer.stream_file,
+                    args=(filename,),
+                    daemon=True
+                ).start()
+                
+                self.server_socket.sendto(b"200 OK PLAY", client_addr)
+            
                 
             except FileNotFoundError:
                 self.server_socket.sendto(b"404 NOT_FOUND", client_addr)
