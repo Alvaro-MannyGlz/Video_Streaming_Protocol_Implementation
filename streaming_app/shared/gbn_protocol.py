@@ -63,16 +63,41 @@ class GBNUtilities:
 
 # -- Sending Structure --
 class GBNSender:
-    def __init__(self, socket):
+    def __init__(self, socket, receiver_addr=None, loss_model=None):
         self.socket = socket
         self.send_base = 0
+        self.receiver_addr = receiver_addr
         self.next_seq_num = 0
         self.window_size = 5
         self.unacked_buffer = {}
         self.timer = None
+        self.loss_model = loss_model or LossModel()
 
+        self.metrics = {
+            "packets_sent": 0,
+            "packets_delivered": 0,
+            "packets_lost": 0,
+            "retransmissions": 0,
+            "timeouts": 0,
+            "bytes_sent": 0,
+            "start_time": time.time()
+        }
+        
     def send_data(self,data):
-        pass
+        checksum = GBNUtilities.compute_checksum(data)
+        packet = struct.pack(header_format, self.next_seq_num, checksum) + data
+        self.unacked_buffer[self.next_seq_num] = packet
+        self.metrics["packets_sent"] += 1
+        # Loss model here
+        if not self.loss_model.allow_packet():
+            print(f'Loss. Dropping outgoing packet seq={self.next_seq_num}')
+        else:
+            self.socket.sendto(packet, self.receiver_addr)
+
+        if self.send_base == self.next_seq_num:
+            self.start_timer()
+
+        self.next_seq_num = (self.next_seq_num + 1) % seq_num
 
     def receive_ack(self, ack_num):
         # if-else for receiving logic
@@ -96,12 +121,39 @@ class GBNSender:
         self.start_timer()
 
     def handle_timeout(self):
+        print("Timeout triggered!")
+        self.metrics["timeouts"] += 1
+        self.metrics["retransmissions"] += 1
         # Resend all packets in window starting at send_base
         for seq in sorted(self.unacked_buffer.keys()):
             packet = self.unacked_buffer[seq]
-            self.socket.sendto(packet, self.receiver_addr)
+            self.metrics["packets_sent"] += 1
+            # Loss model here
+            if not self.loss_model.allow_packet():
+                print(f'Loss. Dropping retransmission seq={seq}')
+                self.metrics["packets_lost"] += 1
+            else:
+                self.socket.sendto(packet, self.receiver_addr)
+                self.metrics["packets_delivered"] += 1
+                self.metrics["bytes_sent"] += len(packet)
 
         self.restart_timer()
+
+        def get_metrics(self):
+        now = time.time()
+        elapsed = now - self.metrics["start_time"]
+        throughput = self.metrics["bytes_sent"] / elapsed if elapsed > 0 else 0
+        efficiency = (self.metrics["packets_delivered"] / max(self.metrics["packets_sent"], 1))
+
+        return {
+            "packets_sent": self.metrics["packets_sent"],
+            "packets_delivered": self.metrics["packets_delivered"],
+            "packets_lost": self.metrics["packets_lost"],
+            "retransmissions": self.metrics["retransmissions"],
+            "timeouts": self.metrics["timeouts"],
+            "efficiency": efficiency,
+            "elapsed_time_sec": elapsed
+        }
 
 # -- Receiver Structure (Francisco) --
 import logging
