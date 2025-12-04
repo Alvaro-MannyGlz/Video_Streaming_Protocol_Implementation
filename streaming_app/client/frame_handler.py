@@ -1,4 +1,3 @@
-# Receiver's Application Layer
 """
 FrameHandler:
 - Reassembles frames from chunked payloads.
