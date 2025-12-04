@@ -48,7 +48,7 @@ class RTPStreamer:
         """
         self.loss = LossModel(
             random_loss_rate=0.0,
-            burst_loss_rate=0.05,
+            burst_loss_rate=0.1,
             burst_duration_ms=100,
             burst_interval_ms=1000
         )
