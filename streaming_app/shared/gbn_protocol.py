@@ -133,7 +133,7 @@ class GBNSender:
 
         self.restart_timer()
 
-        def get_metrics(self):
+    def get_metrics(self):
         now = time.time()
         elapsed = now - self.metrics["start_time"]
         throughput = self.metrics["bytes_sent"] / elapsed if elapsed > 0 else 0
