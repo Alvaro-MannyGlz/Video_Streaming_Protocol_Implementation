@@ -46,7 +46,7 @@ class GBNUtilities:
             return seq_num, checksum, payload
         except struct.error:
             return None
-            
+
     @staticmethod
     def parse_header(data: bytes):
         """Alias for deserialize to match server calls"""
@@ -74,17 +74,15 @@ class GBNSender:
             "bytes_sent": 0,
             "start_time": time.time()
         }
-        
+
     def send_data(self, data):
         # 1. Checksum includes SeqNum + Payload to match Receiver logic
         seq_bytes = struct.pack('!H', self.next_seq_num)
         checksum = GBNUtilities.compute_checksum(seq_bytes + data)
-        
         packet = GBNUtilities.serialize_packet(self.next_seq_num, checksum, data)
-        
         self.unacked_buffer[self.next_seq_num] = packet
         self.metrics["packets_sent"] += 1
-        
+
         if self.loss_model.allow_packet():
             self.sock.sendto(packet, self.receiver_addr)
         else:
@@ -98,7 +96,6 @@ class GBNSender:
 
     def receive_ack(self, ack_num):
         self.stop_timer()
-        
         if ack_num in self.unacked_buffer:
             # Remove all packets up to and including ack_num
             to_remove = []
@@ -106,15 +103,14 @@ class GBNSender:
                 to_remove.append(seq)
                 if seq == ack_num:
                     break
-            
             for seq in to_remove:
                 del self.unacked_buffer[seq]
                 self.metrics["packets_delivered"] += 1
-                
+
             # Update send_base (simplification: base follows the cleared buffer)
             if not self.unacked_buffer:
                 self.send_base = self.next_seq_num
-            
+
         if self.unacked_buffer:
             self.start_timer()
 
@@ -136,7 +132,6 @@ class GBNSender:
         print("Timeout triggered!")
         self.metrics["timeouts"] += 1
         self.metrics["retransmissions"] += 1
-        
         for seq in sorted(self.unacked_buffer.keys()):
             packet = self.unacked_buffer[seq]
             self.metrics["packets_sent"] += 1
@@ -159,6 +154,12 @@ class GBNSender:
             "elapsed_time_sec": elapsed
         }
 
+    def process_ack(self, ack_num: int):
+        # Ignore ACKs not inside the window
+        if ack_num not in self.unacked_buffer:
+            return
+        self.receive_ack(ack_num)
+
 # -- Receiver Class --
 
 logger = logging.getLogger("GBNReceiver")
@@ -170,7 +171,7 @@ class GBNReceiver:
         self.peer = peer
         self.recv_buf_size = recv_buf_size
         self._closed = False
-        self.expected = 0 
+        self.expected = 0
         if timeout is not None:
             self.sock.settimeout(timeout)
 

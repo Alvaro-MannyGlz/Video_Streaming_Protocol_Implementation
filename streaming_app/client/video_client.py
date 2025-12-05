@@ -10,8 +10,13 @@ import sys
 import os
 import socket
 from typing import Optional
+from queue import Queue
+import cv2
+import numpy as np
 
-# Setup path to find 'shared' folder 
+frame_queue = Queue()
+
+# Setup path to find 'shared' folder
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from shared.gbn_protocol import GBNReceiver
@@ -30,7 +35,6 @@ class VideoClient:
                  buffer_capacity_frames: int = 120,
                  start_frame_id: int = 0,
                  display_callback: Optional[callable] = None):
-        
         self.gbn = gbn_transport
         self.filename = filename
         self.frame_handler = FrameHandler(fps=fps,
@@ -45,7 +49,7 @@ class VideoClient:
         logger.info("Sending PLAY request for '%s'", self.filename)
         try:
             cmd = PLAY_CMD_TEMPLATE.replace(b'{}', self.filename.encode('utf-8'))
-            self.gbn.send(cmd) 
+            self.gbn.send(cmd)
         except Exception:
             logger.exception("Failed to send PLAY request")
             raise
@@ -72,7 +76,7 @@ class VideoClient:
         while not self._recv_stop.is_set():
             try:
                 # GBNReceiver.recv() should block until a valid, in-order packet arrives
-                payload = self.gbn.recv()  
+                payload = self.gbn.recv()
             except Exception:
                 logger.exception("Error receiving from GBN transport")
                 break
@@ -98,31 +102,34 @@ class VideoClient:
         return self.frame_handler.get_metrics()
 
 def example_display_callback(frame_id: int, frame_bytes: bytes):
-    try:
-        import cv2
-        import numpy as np
-        nparr = np.frombuffer(frame_bytes, dtype='uint8')
-        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-        if img is not None:
-            cv2.imshow('CinePy Client', img)
-            cv2.waitKey(1)
-    except ImportError:
-        pass
+    frame_queue.put(frame_bytes)
 
 def run_client(gbn_transport, filename: str, fps: float = 30.0):
     client = VideoClient(gbn_transport, filename, fps=fps, display_callback=example_display_callback)
     client.start()
+
     try:
         while not client.frame_handler.eos_received:
-            time.sleep(0.1)
+            # pull frame from queue
+            if not frame_queue.empty():
+                frame_bytes = frame_queue.get()
+
+                nparr = np.frombuffer(frame_bytes, dtype='uint8')
+                img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+
+                if img is not None:
+                    cv2.imshow("CinePy Client", img)
+                    cv2.waitKey(1)
+
+            time.sleep(0.01)
+
     except KeyboardInterrupt:
         pass
+
     finally:
         client.stop()
-        try:
-            import cv2
-            cv2.destroyAllWindows()
-        except: pass
+        cv2.destroyAllWindows()
+
 
 # --- MAIN BLOCK ---
 if __name__ == "__main__":
@@ -135,9 +142,7 @@ if __name__ == "__main__":
 
     # 1. Create UDP Socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    
     # 2. Wrap it in GBNReceiver (which we define in shared/gbn_protocol.py)
     transport = GBNReceiver(sock, (server_ip, server_port))
-    
     # 3. Run
     run_client(transport, filename)
