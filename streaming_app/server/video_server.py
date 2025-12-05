@@ -86,6 +86,7 @@ class VideoServer:
                 
                 # We pass the sender to the streamer so it can "push" packets
                 streamer = rtp_streamer.RTPStreamer(sender)
+                
                 session["streamer"] = streamer
                 
                 # Stream video in background thread
