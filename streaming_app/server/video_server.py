@@ -26,33 +26,32 @@ class VideoServer:
         print("[SERVER] Waiting for client command...")
         while True:
             try:
-                # Receive data from client (could be Command OR ACK)
+                # Receive data
                 data, client_addr = self.server_socket.recvfrom(2048)
-                # 1. Check if it is a Text Command (PLAY/STOP)
+                
+                # 1. Text Command (PLAY/STOP)
                 if data.startswith(b"PLAY") or data.startswith(b"STOP"):
                     message = data.decode('utf-8')
                     print(f"[SERVER] Command from {client_addr}: {message}")
-                    threading.Thread(
-                        target=self.handle_client,
-                        args=(message, client_addr),
-                        daemon=True
-                    ).start()
+                    threading.Thread(target=self.handle_client, args=(message, client_addr), daemon=True).start()
 
-                # 2. Check if it is a Binary ACK (GBN Protocol)
+                # 2. Binary ACK (GBN Protocol)
                 else:
-                    # It's likely an ACK.
-                    # If we have an active session, pass the ACK to the sender.
-                    if client_addr in client_sessions:
-                        session = client_sessions[client_addr]
+                    # --- FIX: PROMISCUOUS MODE ---
+                    # We bypass the strict 'client_addr' check.
+                    # If we have ANY active session, we assume the ACK belongs to it.
+                    if len(client_sessions) > 0:
+                        # Get the first available session
+                        session = list(client_sessions.values())[0]
+                        
                         if session["sender"]:
-                            # We need to extract the seq_num from the packet
-                            # Assuming your GBNUtilities has a parse method:
                             seq_num, checksum, _ = GBNUtilities.parse_header(data)
                             if seq_num is not None:
                                 session["sender"].process_ack(seq_num)
+                    # -----------------------------
 
             except Exception as e:
-                print(f"[SERVER] Error in main loop: {e}")
+                print(f"[SERVER] Error: {e}")
 
     def handle_client(self, message, client_addr):
         parts = message.split(maxsplit=1)
@@ -90,7 +89,7 @@ class VideoServer:
                 # --- PROFILE 3: HEAVY BURST LOSS (Simulate Outage) ---
                 # loss_profile = LossModel(
                 #     burst_loss_rate=1.0, 
-                #     burst_duration_ms=100, 
+                #     burst_duration_ms=500, 
                 #     burst_interval_ms=1000
                 # )
                 # ==========================================================

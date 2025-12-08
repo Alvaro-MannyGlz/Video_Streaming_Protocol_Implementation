@@ -13,16 +13,20 @@ class LossModel:
         self.burst_interval_ms = burst_interval_ms
 
     def allow_packet(self):
+        # 1. Burst Logic
         if self.burst_loss_rate > 0:
-            # Get time in ms
             now = int(time.time() * 1000)
-            pos = now % self.burst_interval_ms
-            if pos < self.burst_duration_ms:
-                # nested if statements
-                if rd.random() < self.burst_loss_rate:
-                    return False
+            # Avoid division by zero if interval is not set
+            if self.burst_interval_ms > 0:
+                pos = now % self.burst_interval_ms
+                
+                # If we are inside the "Danger Zone" (Duration)
+                if pos < self.burst_duration_ms:
+                    if rd.random() < self.burst_loss_rate:
+                        return False # DROP PACKET
 
+        # 2. Random Logic
         if rd.random() < self.random_loss_rate:
-            return False
+            return False # DROP PACKET
 
-        return True
+        return True # SEND PACKET
