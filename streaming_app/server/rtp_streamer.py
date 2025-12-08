@@ -18,36 +18,16 @@ class RTPStreamer:
         - fragmenting frames into RTP chunks
         - pacing frames using FPS
     """
-    def __init__(self, gbn_sender, server_socket, max_packet_size=1400, fps=30):
+    # FIX: We removed 'server_socket' from here so it matches video_server.py
+    def __init__(self, gbn_sender, max_packet_size=1400, fps=30):
         self.gbn = gbn_sender
         self.max_packet_size = max_packet_size
         self.max_chunk_bytes = max_packet_size - 8
         self.fps = fps
         self.frame_id = 0
         self._stop = False
-        self.server_socket = server_socket
-
-        # # Ideal conditions
-        # self.loss = LossModel(
-        #     random_loss_rate=0.0,
-        #     burst_loss_rate=0.0,
-        #     burst_duration_ms=0,
-        #     burst_interval_ms=0
-        # )
-        # # Random 5% loss simulation
-        # self.loss = LossModel(
-        #     random_loss_rate=0.05,
-        #     burst_loss_rate=0.0,
-        #     burst_duration_ms=0,
-        #     burst_interval_ms=0
-        # )
-        # Heavy traffic w/ heavy loss simulation
-        self.loss = LossModel(
-            random_loss_rate=0.0,
-            burst_loss_rate=0.1,
-            burst_duration_ms=100,
-            burst_interval_ms=1000
-        )
+        
+        # Loss model is now handled by the Sender, not here.
 
     def _encode_frame(self, frame):
         # Convert raw images into JPEG bytes
@@ -112,6 +92,17 @@ class RTPStreamer:
         finally:
             cap.release()
             self.send_eos()
+            
+            # --- METRICS REPORT ---
+            stats = self.gbn.get_metrics()
+            print("\n" + "="*30)
+            print("SERVER REPORT")
+            print("="*30)
+            print(f"Completion Time : {stats['elapsed_time_sec']:.2f} seconds")
+            print(f"Retransmissions : {stats['retransmissions']}")
+            print(f"Timeouts        : {stats['timeouts']}")
+            print(f"Efficiency      : {stats.get('efficiency', 0):.2f}") 
+            print("="*30 + "\n")
 
     def stop_stream(self):
         # Stops streaming loop

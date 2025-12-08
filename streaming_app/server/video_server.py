@@ -8,6 +8,7 @@ BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 sys.path.insert(0, BASE_DIR)
 
 from shared.gbn_protocol import GBNSender, GBNUtilities
+from shared.loss_metrics import LossModel
 # Ensure this file exists and imports cv2 successfully now
 import rtp_streamer
 
@@ -56,43 +57,71 @@ class VideoServer:
     def handle_client(self, message, client_addr):
         parts = message.split(maxsplit=1)
         command = parts[0]
-        # Extract filename
+        
+        # Extract filename 
         if len(parts) > 1:
             argument = parts[1].strip()
         else:
             argument = ""
+        
         # Create session entry for new clients if needed
         if client_addr not in client_sessions:
             client_sessions[client_addr] = {
                 "streamer": None,
-                "sender": None # Store sender here to access it for ACKs
+                "sender": None 
             }
+            
         session = client_sessions[client_addr]
+        
         if command == "PLAY":
             filename = argument.strip()
+            
             try:
-                # --- FIX: Pass client_addr to GBNSender ---
-                sender = GBNSender(self.server_socket, client_addr)
+                # ==========================================================
+                # TEST PROFILE SELECTOR (Uncomment ONE block below)
+                # ==========================================================
+                
+                # --- PROFILE 1: NO LOSS (Baseline) ---
+                loss_profile = LossModel() 
+
+                # --- PROFILE 2: RANDOM LOSS (Simulate Jitter) ---
+                # loss_profile = LossModel(random_loss_rate=0.05)
+
+                # --- PROFILE 3: HEAVY BURST LOSS (Simulate Outage) ---
+                # loss_profile = LossModel(
+                #     burst_loss_rate=1.0, 
+                #     burst_duration_ms=100, 
+                #     burst_interval_ms=1000
+                # )
+                # ==========================================================
+
+                # 1. Create GBNSender with the selected loss profile
+                sender = GBNSender(self.server_socket, client_addr, loss_model=loss_profile)
+                
                 session["sender"] = sender
-                # We pass the sender to the streamer so it can "push" packets
-                streamer = rtp_streamer.RTPStreamer(sender, self.server_socket)
+                
+                # 2. Pass sender to streamer
+                # CRITICAL FIX: Removed self.server_socket from arguments here!
+                streamer = rtp_streamer.RTPStreamer(sender)
                 session["streamer"] = streamer
+                
                 # Stream video in background thread
                 threading.Thread(
                     target=streamer.stream_file,
                     args=(filename,),
                     daemon=True
                 ).start()
+                
                 # Acknowledge the command
                 self.server_socket.sendto(b"200 OK PLAY", client_addr)
+            
             except Exception as e:
                 print(f"[SERVER] Play Error: {e}")
                 self.server_socket.sendto(b"500 INTERNAL_ERROR", client_addr)
+        
         elif command == "STOP":
             if session["streamer"]:
-                # Ensure your RTPStreamer has a stop method
-                # session["streamer"].stop_stream()
-                pass
+                session["streamer"].stop_stream() 
             self.server_socket.sendto(b"200 OK STOP", client_addr)
         else:
             self.server_socket.sendto(b"400 BAD_REQUEST", client_addr)

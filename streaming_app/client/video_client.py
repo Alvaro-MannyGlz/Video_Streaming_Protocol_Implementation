@@ -107,20 +107,20 @@ def example_display_callback(frame_id: int, frame_bytes: bytes):
 def run_client(gbn_transport, filename: str, fps: float = 30.0):
     client = VideoClient(gbn_transport, filename, fps=fps, display_callback=example_display_callback)
     client.start()
+    
+    # Capture Start Time for Duration/Completion calculation
+    start_time = time.time()
 
     try:
         while not client.frame_handler.eos_received:
             # pull frame from queue
             if not frame_queue.empty():
                 frame_bytes = frame_queue.get()
-
                 nparr = np.frombuffer(frame_bytes, dtype='uint8')
                 img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
                 if img is not None:
                     cv2.imshow("CinePy Client", img)
                     cv2.waitKey(1)
-
             time.sleep(0.01)
 
     except KeyboardInterrupt:
@@ -129,6 +129,19 @@ def run_client(gbn_transport, filename: str, fps: float = 30.0):
     finally:
         client.stop()
         cv2.destroyAllWindows()
+        
+        # --- METRICS REPORT ---
+        end_time = time.time()
+        completion_time = end_time - start_time
+        metrics = client.get_metrics()
+        
+        print("\n" + "="*30)
+        print("CLIENT REPORT")
+        print("="*30)
+        print(f"Completion Time : {completion_time:.2f} seconds")
+        print(f"Stall Time (Lag): {metrics['stall_time_seconds']} seconds")
+        print(f"Dropped Frames  : {metrics['dropped_frames']}")
+        print("="*30 + "\n")
 
 
 # --- MAIN BLOCK ---
